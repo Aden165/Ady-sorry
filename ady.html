@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ADY - Sorry</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f9f8f5;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body { background: #1a1a1a; }
+    }
+
+    #wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 2.5rem;
+    }
+
+    #bubble {
+      background: #ffffff;
+      border: 1.5px solid rgba(0,0,0,0.2);
+      border-radius: 18px;
+      padding: 12px 22px;
+      font-size: 15px;
+      color: #1a1a1a;
+      text-align: center;
+      max-width: 300px;
+      line-height: 1.6;
+      opacity: 0;
+      transition: opacity 0.4s;
+      margin-bottom: 10px;
+      position: relative;
+      min-height: 52px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      #bubble { background: #2a2a2a; border-color: rgba(255,255,255,0.2); color: #e8e8e8; }
+      #bubble::before { border-top-color: #2a2a2a !important; }
+    }
+
+    #bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -12px; left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: rgba(0,0,0,0.2);
+    }
+
+    #bubble::before {
+      content: '';
+      position: absolute;
+      bottom: -9px; left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: #ffffff;
+      z-index: 1;
+    }
+
+    canvas { display: block; }
+
+    #slapBtn {
+      margin-top: 0.8rem;
+      padding: 11px 36px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 8px;
+      border: 1.5px solid rgba(0,0,0,0.2);
+      background: #ffffff;
+      color: #1a1a1a;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    #slapBtn:hover { background: #f0efeb; }
+    #slapBtn:active { transform: scale(0.97); }
+    #slapBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    @media (prefers-color-scheme: dark) {
+      #slapBtn { background: #2a2a2a; border-color: rgba(255,255,255,0.2); color: #e8e8e8; }
+      #slapBtn:hover { background: #333; }
+    }
+
+    #nametag {
+      font-size: 13px;
+      color: #888;
+      letter-spacing: 2px;
+      font-weight: 500;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <div id="bubble"></div>
+    <canvas id="c" width="340" height="320"></canvas>
+    <div id="nametag">— ADY —</div>
+    <button id="slapBtn">👋 SLAP</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    const btn = document.getElementById('slapBtn');
+    const bubble = document.getElementById('bubble');
+
+    const W=340, H=320, CX=170;
+    let bowT=0, mouthState='neutral', handX=420, showStars=false, shakeOff=0, animating=false;
+
+    function getCol() {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? '#e8e8e8' : '#1a1a1a';
+    }
+
+    function draw() {
+      ctx.clearRect(0,0,W,H);
+      const c = getCol();
+      ctx.lineCap='round'; ctx.lineJoin='round';
+      const sx = CX + shakeOff;
+      const feetY=295, waistY=205, waistX=sx;
+      const lw=7;
+
+      ctx.strokeStyle=c; ctx.lineWidth=lw;
+      ctx.beginPath(); ctx.moveTo(waistX-22,feetY); ctx.lineTo(waistX,waistY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(waistX+22,feetY); ctx.lineTo(waistX,waistY); ctx.stroke();
+
+      const bowAngle = bowT * 75 * Math.PI/180;
+      const torsoLen=80;
+      const torsoEndX = waistX + Math.sin(bowAngle)*torsoLen*0.28;
+      const torsoEndY = waistY - Math.cos(bowAngle)*torsoLen;
+
+      ctx.strokeStyle=c; ctx.lineWidth=lw;
+      ctx.beginPath(); ctx.moveTo(waistX,waistY); ctx.lineTo(torsoEndX,torsoEndY); ctx.stroke();
+
+      const shouldFrac=0.5;
+      const shouldX = waistX+(torsoEndX-waistX)*shouldFrac;
+      const shouldY = waistY+(torsoEndY-waistY)*shouldFrac;
+
+      const cosA=Math.cos(bowAngle), sinA=Math.sin(bowAngle);
+      const armDropX=sinA*0.4, armDropY=cosA*0.4+0.6;
+      const lArmX=shouldX-cosA*28+armDropX*55;
+      const lArmY=shouldY-sinA*28+armDropY*55;
+      const rArmX=shouldX+cosA*28+armDropX*55;
+      const rArmY=shouldY+sinA*28+armDropY*55;
+
+      ctx.beginPath(); ctx.moveTo(shouldX,shouldY); ctx.lineTo(lArmX,lArmY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(shouldX,shouldY); ctx.lineTo(rArmX,rArmY); ctx.stroke();
+
+      const headR=28;
+      const headCX = torsoEndX;
+      const headCY = torsoEndY - headR;
+
+      ctx.lineWidth=5; ctx.strokeStyle=c;
+      ctx.beginPath(); ctx.arc(headCX,headCY,headR,0,Math.PI*2); ctx.stroke();
+
+      ctx.fillStyle=c;
+      ctx.beginPath(); ctx.arc(headCX-10,headCY-8,3.5,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(headCX+10,headCY-8,3.5,0,Math.PI*2); ctx.fill();
+
+      ctx.lineWidth=3.5; ctx.strokeStyle=c;
+      const mouthY = headCY+9;
+      ctx.beginPath();
+      if(mouthState==='frown') {
+        ctx.arc(headCX,mouthY-5,9,0,Math.PI,true);
+      } else {
+        ctx.moveTo(headCX-9,mouthY); ctx.lineTo(headCX+9,mouthY);
+      }
+      ctx.stroke();
+
+      if(handX<380) {
+        ctx.lineWidth=6; ctx.strokeStyle=c;
+        ctx.beginPath(); ctx.moveTo(handX,100); ctx.lineTo(handX-55,116); ctx.stroke();
+        ctx.fillStyle=c;
+        ctx.beginPath(); ctx.ellipse(handX-70,121,19,12,0.25,0,Math.PI*2); ctx.fill();
+      }
+
+      if(showStars) {
+        ctx.font='bold 20px sans-serif'; ctx.fillStyle='#E24B4A';
+        ctx.fillText('★',sx+50,78);
+        ctx.font='bold 14px sans-serif'; ctx.fillStyle='#BA7517';
+        ctx.fillText('★',sx+70,62);
+        ctx.font='bold 11px sans-serif'; ctx.fillStyle='#E24B4A';
+        ctx.fillText('✦',sx+35,62);
+      }
+    }
+
+    draw();
+
+    function lerp(a,b,t){return a+(b-a)*t;}
+    function easeInOut(t){return t<0.5?2*t*t:-1+(4-2*t)*t;}
+    function easeOut(t){return 1-Math.pow(1-t,3);}
+
+    function tween(from,to,dur,ease,onUpdate,onDone){
+      const start=performance.now();
+      (function step(now){
+        const raw=Math.min((now-start)/dur,1);
+        onUpdate(lerp(from,to,ease(raw)));
+        if(raw<1) requestAnimationFrame(step); else onDone();
+      })(performance.now());
+    }
+
+    function shakeAnim(cb){
+      const kicks=[9,-13,10,-8,6,-4,2,0]; let i=0;
+      (function next(){
+        if(i<kicks.length){shakeOff=kicks[i++];draw();setTimeout(next,55);}
+        else{shakeOff=0;draw();cb();}
+      })();
+    }
+
+    function bowCycle(n,cb){
+      if(n===0){cb();return;}
+      bubble.textContent='sorry';
+      bubble.style.opacity='1';
+      tween(0,1,500,easeInOut,v=>{bowT=v;draw();},()=>{
+        bubble.style.opacity='0';
+        setTimeout(()=>{
+          tween(1,0,440,easeInOut,v=>{bowT=v;draw();},()=>{
+            setTimeout(()=>bowCycle(n-1,cb),100);
+          });
+        },120);
+      });
+    }
+
+    function run(){
+      if(animating) return;
+      animating=true;
+      btn.disabled=true;
+      bubble.style.opacity='0';
+      bubble.textContent='';
+      bowT=0; mouthState='neutral'; shakeOff=0; showStars=false; handX=420;
+      draw();
+
+      tween(420,105,300,easeOut,v=>{handX=v;draw();},()=>{
+        showStars=true; mouthState='frown'; draw();
+        shakeAnim(()=>{
+          showStars=false;
+          tween(105,420,240,easeOut,v=>{handX=v;draw();},()=>{
+            handX=999;
+            setTimeout(()=>{
+              mouthState='neutral';
+              bowCycle(5,()=>{
+                bubble.innerHTML="I am sorry, I'll reply faster,<br>trust me you are not talking to a wall";
+                bubble.style.opacity='1';
+                animating=false;
+                btn.disabled=false;
+              });
+            },200);
+          });
+        });
+      });
+    }
+
+    btn.addEventListener('click',run);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
+  </script>
+</body>
+</html>
